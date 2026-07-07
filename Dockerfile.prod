@@ -22,6 +22,9 @@ fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2)+'\n');" && \
 
 COPY . .
 
+# Replace hardcoded localhost URL with relative path for web deployment
+RUN sed -i 's|http://localhost:10588||g' data/web/index.html
+
 RUN npx cross-env NODE_ENV=prod npx tsx scripts/build.ts
 
 # Remove devDependencies after build
