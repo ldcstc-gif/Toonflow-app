@@ -17,12 +17,12 @@ for(const section of ['dependencies','devDependencies']){\
     delete pkg[section][name];\
 }\
 fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2)+'\n');" && \
-    yarn install --frozen-lockfile && \
+    yarn install && \
     yarn cache clean
 
 COPY . .
 
-RUN yarn build
+RUN npx cross-env NODE_ENV=prod npx tsx scripts/build.ts
 
 # --- Production stage ---
 FROM node:24-bookworm-slim
@@ -42,7 +42,7 @@ delete pkg.devDependencies;\
 for(const name of ['custom-electron-titlebar','electron','electron-builder','electron-rebuild','electronmon'])\
   delete (pkg.dependencies||{})[name];\
 fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2)+'\n');" && \
-    yarn install --production --frozen-lockfile && \
+    yarn install --production && \
     yarn cache clean
 
 COPY --from=builder /app/data ./data
