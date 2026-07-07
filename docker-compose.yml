@@ -1,0 +1,30 @@
+services:
+  toonflow:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: toonflow
+    restart: unless-stopped
+    ports:
+      - "10588:10588"
+    volumes:
+      - toonflow-oss:/app/data/oss
+      - toonflow-db:/app/data/db
+    environment:
+      - NODE_ENV=prod
+      - PORT=10588
+
+  nginx:
+    image: nginx:alpine
+    container_name: toonflow-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - toonflow
+
+volumes:
+  toonflow-oss:
+  toonflow-db:
