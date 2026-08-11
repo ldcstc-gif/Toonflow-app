@@ -1,0 +1,82 @@
+name: 部署到服务器
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "要部署的分支/标签"
+        required: false
+        default: "master"
+        type: string
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: 部署到生产服务器
+
+    steps:
+      - name: 通过 SSH 执行部署
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script_stop: true
+          envs: DEPLOY_BRANCH
+          script: |
+            set -e
+
+            export NVM_DIR="$HOME/.nvm"
+            if [ ! -d "$NVM_DIR" ]; then
+              curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+            fi
+            . "$NVM_DIR/nvm.sh"
+            nvm install 24 >/dev/null
+            nvm use 24 >/dev/null
+
+            command -v yarn >/dev/null 2>&1 || npm install -g yarn
+            command -v pm2 >/dev/null 2>&1 || npm install -g pm2
+
+            APP_DIR=/opt/Toonflow-app
+            BRANCH="${DEPLOY_BRANCH:-master}"
+
+            if [ -d "$APP_DIR/.git" ]; then
+              cd "$APP_DIR"
+              git fetch origin
+              git checkout "$BRANCH"
+              git reset --hard "origin/$BRANCH"
+            else
+              mkdir -p /opt
+              git clone -b "$BRANCH" https://github.com/HBAI-Ltd/Toonflow-app.git "$APP_DIR"
+              cd "$APP_DIR"
+            fi
+
+            yarn install --frozen-lockfile
+            yarn build
+
+            if [ ! -f pm2.json ]; then
+              cat > pm2.json <<'PM2EOF'
+            {
+              "name": "toonflow-app",
+              "script": "data/serve/app.js",
+              "instances": "max",
+              "exec_mode": "cluster",
+              "env": {
+                "NODE_ENV": "prod",
+                "PORT": 10588,
+                "OSSURL": "http://127.0.0.1:10588/"
+              }
+            }
+            PM2EOF
+            fi
+
+            pm2 startOrReload pm2.json --update-env
+            pm2 save
+        env:
+          DEPLOY_BRANCH: ${{ inputs.branch }}
+
+      - name: 部署完成
+        run: |
+          echo "✅ 已通过 SSH 部署到服务器"
+          echo "分支/标签: ${{ inputs.branch }}"
