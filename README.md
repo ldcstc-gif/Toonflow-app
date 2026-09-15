@@ -419,6 +419,25 @@ pm2 monit             # 监控面板
 
 > 💡 **说明**：本仓库已内置编译好的前端资源，普通用户无需单独部署前端。前端仓库仅供需要二次开发的开发者使用。
 
+#### 7. 通过 GitHub Actions 自动部署（可选）
+
+仓库内置 [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)，可通过 SSH 自动执行上述「安装环境 → 拉取代码 → 构建 → PM2 启动」流程，无需手动登录服务器。
+
+**使用步骤：**
+
+1. 在仓库 `Settings → Secrets and variables → Actions` 中添加以下 Secrets：
+
+   | Secret 名称     | 说明                             |
+   | --------------- | -------------------------------- |
+   | `SSH_HOST`      | 服务器 IP 或域名                 |
+   | `SSH_USER`      | SSH 登录用户名                   |
+   | `SSH_PASSWORD`  | SSH 登录密码（建议改用密钥认证） |
+   | `SSH_PORT`      | SSH 端口（可选，默认 22）        |
+
+2. 打开仓库 `Actions → 部署到服务器 → Run workflow`，选择要部署的分支/标签后运行。
+
+> ⚠️ **安全提示**：密码会以 GitHub Secrets 加密存储，但仍建议尽快切换为 SSH 密钥认证（将 `password` 参数替换为 `key: ${{ secrets.SSH_PRIVATE_KEY }}`），并定期轮换凭据。
+
 ---
 
 # 🔧 开发流程指南
